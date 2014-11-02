@@ -1,28 +1,75 @@
 <?php
-/**
- * Testimonial post type
- *
- * @package TenderBytes
- * @subpackage CPTs
- */
+/*
+Plugin Name: Simple Testimonials
+Plugin URI: http://plugins.findingsimple.com
+Description: Adds an Testimonial CPT.
+Version: 1.0
+Author: Finding Simple
+Author URI: http://findingsimple.com
+License: GPL2
+*/
+/*
+Copyright 2014  Finding Simple  (email : plugins@findingsimple.com)
 
-Tenderbytes_Testimonials::bootstrap();
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+if ( ! class_exists( 'Simple_Testimonials' ) ) :
 
 /**
- * Testimonial post type
+ * So that themes and other plugins can customise the text domain, the Simple_Testimonials
+ * should not be initialized until after the plugins_loaded and after_setup_theme hooks.
+ * However, it also needs to run early on the init hook.
  *
- * @package TenderBytes
- * @subpackage CPTs
+ * @package Simple Testimonials
+ * @since 1.0
  */
-class Tenderbytes_Testimonials {
+function initialize_testimonials(){
+	Simple_Testimonials::init();
+}
+add_action( 'init', 'initialize_testimonials', -1 );
+
+/**
+ * Plugin Main Class.
+ *
+ * @package Simple Testimonials
+ * @since 1.0
+ */
+class Simple_Testimonials {
+
+	static $text_domain;
+
+	static $post_type_name;
+	
 	/**
-	 * Bootstrap
+	 * Initialise
 	 */
-	public static function bootstrap() {
+	public static function init() {
+
+		self::$text_domain = apply_filters( 'simple_testimonials_text_domain', 'Simple_Testimonials' );
+
+		self::$post_type_name = apply_filters( 'simple_testimonials_post_type_name', 'testimonial' );
+
 		add_action( 'init', array( __CLASS__, 'register' ) );
+
 		add_filter( 'post_updated_messages', array( __CLASS__, 'updated_messages' ) );
+
 		add_action( 'add_meta_boxes', array( __CLASS__, 'add_meta_box' ) );
+
 		add_action( 'save_post', array( __CLASS__, 'save_meta' ), 10, 1 );
+
 	}
 
 	/**
@@ -31,33 +78,42 @@ class Tenderbytes_Testimonials {
 	public static function register() {
 		
 		$labels = array(
-			'name' => _x('Testimonials', 'post type general name', hybrid_get_parent_textdomain() ),
-			'singular_name' => _x('Testimonial', 'post type singular name', hybrid_get_parent_textdomain() ),
-			'add_new' => _x('Add New', 'testimonial', hybrid_get_parent_textdomain() ),
-			'add_new_item' => __('Add New Testimonial', hybrid_get_parent_textdomain() ),
-			'edit_item' => __('Edit Testimonial', hybrid_get_parent_textdomain() ),
-			'new_item' => __('New Testimonial', hybrid_get_parent_textdomain() ),
-			'view_item' => __('View Testimonial', hybrid_get_parent_textdomain() ),
-			'search_items' => __('Search Testimonials', hybrid_get_parent_textdomain() ),
-			'not_found' =>  __('No testimonials found', hybrid_get_parent_textdomain() ),
-			'not_found_in_trash' => __('No testimonials found in Trash', hybrid_get_parent_textdomain() ),
-			'parent_item_colon' => ''
+			'name'               => __( 'Testimonials', self::$text_domain ),
+			'singular_name'      => __( 'Testimonial', self::$text_domain ),
+			'all_items'          => __( 'All Testimonials', self::$text_domain ),
+			'add_new_item'       => __( 'Add New Testimonial', self::$text_domain ),
+			'edit_item'          => __( 'Edit Testimonial', self::$text_domain ),
+			'new_item'           => __( 'New Testimonial', self::$text_domain ),
+			'view_item'          => __( 'View Testimonial', self::$text_domain ),
+			'search_items'       => __( 'Search Testimonials', self::$text_domain ),
+			'not_found'          => __( 'No testimonials found', self::$text_domain ),
+			'not_found_in_trash' => __( 'No testimonials found in trash', self::$text_domain ),
+			'menu_name'      	 => __( 'Testimonials', self::$text_domain ),
 		);
+
+		$labels = apply_filters( self::$post_type_name . '_cpt_labels' , $labels );		
+		
 		$args = array(
+			'description' => __( 'Testimonials', self::$text_domain ),
 			'labels' => $labels,
-			'public' => true,
-			'publicly_queryable' => true,
+			'public' => false,
+			'menu_icon' => 'dashicons-format-chat',
 			'show_ui' => true, 
 			'query_var' => true,
-			'rewrite' => array( 'slug' => 'testimonials', 'with_front' => false ),
+			'has_archive' => false,
+			'rewrite' => array( 'slug' => 'testimonial', 'with_front' => false ),
 			'capability_type' => 'post',
 			'hierarchical' => false,
 			'menu_position' => null,
 			'taxonomies' => array(''),
+			'show_in_nav_menus' => false,
 			'supports' => array('title', 'editor', 'thumbnail', 'custom-fields')
 		); 
-
-		register_post_type('testimonial', $args);
+		
+		$args = apply_filters( self::$post_type_name . '_cpt_args' , $args );
+		
+		register_post_type( self::$post_type_name , $args );
+		
 	}
 
 	/**
@@ -69,21 +125,21 @@ class Tenderbytes_Testimonials {
 	public static function updated_messages( $messages ) {
 		global $post;
 
-		$messages['testimonial'] = array(
+		$messages[ self::$post_type_name ] = array(
 			0 => '', // Unused. Messages start at index 1.
-			1 => sprintf( __('Testimonial updated. <a href="%s">View testimonial</a>', hybrid_get_parent_textdomain() ), esc_url( get_permalink($post->ID) ) ),
-			2 => __('Custom field updated.', hybrid_get_parent_textdomain() ),
-			3 => __('Custom field deleted.', hybrid_get_parent_textdomain() ),
-			4 => __('Testimonial updated.', hybrid_get_parent_textdomain() ),
+			1 => sprintf( __('Testimonial updated.', self::$text_domain ), esc_url( get_permalink($post->ID) ) ),
+			2 => __('Custom field updated.', self::$text_domain ),
+			3 => __('Custom field deleted.', self::$text_domain ),
+			4 => __('Testimonial updated.', self::$text_domain ),
 			/* translators: %s: date and time of the revision */
-			5 => isset($_GET['revision']) ? sprintf( __('Testimonial restored to revision from %s', hybrid_get_parent_textdomain() ), wp_post_revision_title( (int) $_GET['revision'], false ) ) : false,
-			6 => sprintf( __('Testimonial published. <a href="%s">View testimonial</a>', hybrid_get_parent_textdomain() ), esc_url( get_permalink($post->ID) ) ),
-			7 => __('Testimonial saved.', hybrid_get_parent_textdomain() ),
-			8 => sprintf( __('Testimonial submitted. <a target="_blank" href="%s">Preview bio</a>', hybrid_get_parent_textdomain() ), esc_url( add_query_arg( 'preview', 'true', get_permalink($post->ID) ) ) ),
-			9 => sprintf( __('Testimonial scheduled for: <strong>%1$s</strong>. <a target="_blank" href="%2$s">Preview testimonial</a>', hybrid_get_parent_textdomain() ),
+			5 => isset($_GET['revision']) ? sprintf( __('Testimonial restored to revision from %s', self::$text_domain ), wp_post_revision_title( (int) $_GET['revision'], false ) ) : false,
+			6 => sprintf( __('Testimonial published.', self::$text_domain ), esc_url( get_permalink($post->ID) ) ),
+			7 => __('Testimonial saved.', self::$text_domain ),
+			8 => sprintf( __('Testimonial submitted.', self::$text_domain ), esc_url( add_query_arg( 'preview', 'true', get_permalink($post->ID) ) ) ),
+			9 => sprintf( __('Testimonial scheduled for: <strong>%1$s</strong>.', self::$text_domain ),
 			  // translators: Publish box date format, see http://php.net/date
 			  date_i18n( __( 'M j, Y @ G:i' ), strtotime( $post->post_date ) ), esc_url( get_permalink($post->ID) ) ),
-			10 => sprintf( __('Testimonial draft updated. <a target="_blank" href="%s">Preview testimonial</a>', hybrid_get_parent_textdomain() ), esc_url( add_query_arg( 'preview', 'true', get_permalink($post->ID) ) ) ),
+			10 => sprintf( __('Testimonial draft updated.', self::$text_domain ), esc_url( add_query_arg( 'preview', 'true', get_permalink($post->ID) ) ) ),
 		);
 
 		return $messages;
@@ -283,4 +339,7 @@ class Tenderbytes_Testimonials {
 		return $company;
 	}
 	/**#@-*/
-}
+
+};
+
+endif;
