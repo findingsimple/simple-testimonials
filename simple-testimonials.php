@@ -70,6 +70,8 @@ class Simple_Testimonials {
 
 		add_action( 'save_post', array( __CLASS__, 'save_meta' ), 10, 1 );
 
+		add_filter( 'enter_title_here', array( __CLASS__, 'testimonial_change_default_title') );
+
 	}
 
 	/**
@@ -338,7 +340,21 @@ class Simple_Testimonials {
 
 		return $company;
 	}
-	/**#@-*/
+
+	/**
+	 * Filter the testimonial title placeholder text
+	 */
+	public static function testimonial_change_default_title( $title ){
+
+		$screen = get_current_screen();
+
+		if  ( 'testimonial' == $screen->post_type ) {
+			$title = "Enter the Person's Name";
+		}
+	 
+		return $title;
+		
+	}
 
 };
 
