@@ -207,7 +207,6 @@ class Simple_Testimonials {
 	 * @param int $post_id The ID of the current post being saved.
 	 */
 	public static function save_meta( $post_id ) {
-		$prefix = hybrid_get_prefix();
 
 		/* Verify the nonce before proceeding. */
 		if ( !isset( $_POST['testimonial-citation'] ) || !wp_verify_nonce( $_POST['testimonial-citation'], basename( __FILE__ ) ) )
